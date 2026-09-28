@@ -8,7 +8,7 @@ from PySide6.QtGui import QColor, QDragEnterEvent
 from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox, QFileDialog,
     QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QListWidget,
     QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSlider, QSpinBox,
-    QSplitter, QVBoxLayout, QWidget, QLineEdit)
+    QSplitter, QVBoxLayout, QWidget, QLineEdit, QTextEdit)
 
 from core.background_remove import remove_ai_background, remove_solid_background
 from core.batch_processor import BatchWorker
@@ -109,7 +109,8 @@ class MainWindow(QMainWindow):
         cl.addWidget(self.preview, 1)
         self.preview.changed.connect(self.preview_changed)
         self.preview.selected.connect(self.set_selected)
-        self.object_choice = QComboBox(); self.object_choice.addItems(['Logo','Số điện thoại'])
+        self.object_choice = QComboBox(); self.object_choice.addItems(['Logo','Số điện thoại','Nội dung tùy chỉnh'])
+        self.object_choice.currentIndexChanged.connect(self.select_object)
         cl.addWidget(self.object_choice)
         grid = QGridLayout()
         labels = ['↖','↑','↗','←','●','→','↙','↓','↘']
@@ -161,6 +162,17 @@ class MainWindow(QMainWindow):
         self.shadow = QCheckBox('Đổ bóng'); form.addRow(self.shadow)
         right.addWidget(phone_box)
 
+        custom_box = QGroupBox('NỘI DUNG TÙY CHỈNH'); form = QFormLayout(custom_box)
+        self.custom_on = QCheckBox('Hiện nội dung'); form.addRow(self.custom_on)
+        self.custom_text = QTextEdit(); self.custom_text.setPlaceholderText('Nhập câu giới thiệu, địa chỉ, Zalo... Có thể xuống dòng.')
+        self.custom_text.setFixedHeight(82); form.addRow('Nội dung', self.custom_text)
+        self.custom_size = self.slider(1, 25); form.addRow('Cỡ chữ %', self.custom_size)
+        self.custom_bold = QCheckBox('Chữ đậm'); form.addRow(self.custom_bold)
+        self.custom_color = self.color_button('Màu chữ', 'custom_color'); form.addRow(self.custom_color)
+        self.custom_stroke_color = self.color_button('Màu viền', 'custom_stroke_color'); form.addRow(self.custom_stroke_color)
+        self.custom_stroke = self.slider(0, 20); form.addRow('Độ dày viền ‰', self.custom_stroke)
+        right.addWidget(custom_box)
+
         out_box = QGroupBox('XUẤT ẢNH'); form = QFormLayout(out_box)
         self.output_label = QLabel('Chưa chọn'); self.output_label.setWordWrap(True)
         form.addRow('Thư mục', self.output_label)
@@ -184,6 +196,10 @@ class MainWindow(QMainWindow):
                                (self.font_size,self.font_size.valueChanged),(self.stroke,self.stroke.valueChanged),
                                (self.tolerance,self.tolerance.valueChanged),(self.softness,self.softness.valueChanged)]:
             signal.connect(self.controls_changed)
+        for signal in (self.custom_on.toggled, self.custom_text.textChanged,
+                       self.custom_size.valueChanged, self.custom_bold.toggled,
+                       self.custom_stroke.valueChanged):
+            signal.connect(self.controls_changed)
 
     def slider(self, low, high):
         s = QSlider(Qt.Orientation.Horizontal); s.setRange(low,high); return s
@@ -204,6 +220,9 @@ class MainWindow(QMainWindow):
         self.phone.setText(s.phone); self.font_combo.setCurrentText(s.font_name)
         self.font_size.setValue(round(s.font_size*100)); self.bold.setChecked(s.bold)
         self.stroke.setValue(round(s.stroke_width*1000)); self.shadow.setChecked(s.shadow)
+        self.custom_on.setChecked(s.custom_enabled); self.custom_text.setPlainText(s.custom_text)
+        self.custom_size.setValue(round(s.custom_font_size*100)); self.custom_bold.setChecked(s.custom_bold)
+        self.custom_stroke.setValue(round(s.custom_stroke_width*1000))
         self.tolerance.setValue(s.quick_tolerance); self.softness.setValue(s.quick_softness)
         self.output_format.setCurrentText(s.output_format); self.quality.setCurrentText(str(s.quality))
         self.output_label.setText(s.output_dir or 'Chưa chọn')
@@ -218,6 +237,9 @@ class MainWindow(QMainWindow):
         s.phone = self.phone.text(); s.font_name = self.font_combo.currentText()
         s.font_size = self.font_size.value()/100; s.bold = self.bold.isChecked()
         s.stroke_width = self.stroke.value()/1000; s.shadow = self.shadow.isChecked()
+        s.custom_enabled = self.custom_on.isChecked(); s.custom_text = self.custom_text.toPlainText()
+        s.custom_font_size = self.custom_size.value()/100; s.custom_bold = self.custom_bold.isChecked()
+        s.custom_stroke_width = self.custom_stroke.value()/1000
         s.quick_tolerance = self.tolerance.value(); s.quick_softness = self.softness.value()
         s.output_format = self.output_format.currentText(); s.quality = int(self.quality.currentText())
         self.preview_changed()
@@ -227,10 +249,14 @@ class MainWindow(QMainWindow):
         self.autosave.start()
 
     def set_selected(self, key):
-        self.object_choice.setCurrentIndex(0 if key == 'logo' else 1)
+        self.object_choice.setCurrentIndex({'logo': 0, 'phone': 1, 'custom': 2}[key])
+
+    def select_object(self, index):
+        self.preview.active = ('logo', 'phone', 'custom')[index]
+        self.preview.update()
 
     def align(self, n):
-        key = 'logo' if self.object_choice.currentIndex() == 0 else 'phone'
+        key = ('logo', 'phone', 'custom')[self.object_choice.currentIndex()]
         setattr(self.settings, key+'_x', (.08,.5,.92)[n%3])
         setattr(self.settings, key+'_y', (.08,.5,.92)[n//3])
         self.preview.active = key; self.preview_changed()
