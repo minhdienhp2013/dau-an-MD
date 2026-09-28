@@ -12,6 +12,7 @@ from core.watermark_processor import render
 class PreviewWidget(QWidget):
     changed = Signal()
     selected = Signal(str)
+    cropSelected = Signal(tuple)
 
     def __init__(self):
         super().__init__()
@@ -26,6 +27,9 @@ class PreviewWidget(QWidget):
         self.active = 'logo'
         self.dragging = ''
         self.show_original = False
+        self.crop_mode = False
+        self.crop_start = None
+        self.crop_end = None
 
     @staticmethod
     def qimage(pil):
@@ -73,8 +77,16 @@ class PreviewWidget(QWidget):
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, 'Thêm ảnh để xem trước')
             return
         rect = self.photo_rect()
-        p.drawImage(rect, self.original if self.show_original else self.current)
-        if self.active in self.boxes and not self.show_original:
+        p.drawImage(rect, self.original if self.show_original or self.crop_mode else self.current)
+        if self.crop_mode and self.crop_start is not None and self.crop_end is not None:
+            x1,y1 = self.crop_start
+            x2,y2 = self.crop_end
+            selection = QRectF(rect.x()+min(x1,x2)*rect.width(), rect.y()+min(y1,y2)*rect.height(),
+                               abs(x2-x1)*rect.width(), abs(y2-y1)*rect.height())
+            p.fillRect(selection, QColor(37, 99, 235, 55))
+            p.setPen(QPen(QColor('#2563eb'), 2, Qt.PenStyle.DashLine))
+            p.drawRect(selection)
+        if self.active in self.boxes and not self.show_original and not self.crop_mode:
             x1,y1,x2,y2 = self.boxes[self.active]
             sx, sy = rect.width()/self.photo.width, rect.height()/self.photo.height
             box = QRectF(rect.x()+x1*sx, rect.y()+y1*sy, (x2-x1)*sx, (y2-y1)*sy)
@@ -86,6 +98,11 @@ class PreviewWidget(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton or self.photo is None:
+            return
+        if self.crop_mode:
+            self.crop_start = self.normalized_point(event.position())
+            self.crop_end = self.crop_start
+            self.update()
             return
         x, y = self.image_point(event.position())
         for key in ('custom','phone','logo'):
@@ -106,6 +123,10 @@ class PreviewWidget(QWidget):
         self.update()
 
     def mouseMoveEvent(self, event):
+        if self.crop_mode and self.crop_start is not None:
+            self.crop_end = self.normalized_point(event.position())
+            self.update()
+            return
         if not self.dragging or self.photo is None:
             return
         x,y = self.image_point(event.position())
@@ -124,9 +145,24 @@ class PreviewWidget(QWidget):
         self.changed.emit()
 
     def mouseReleaseEvent(self, event):
+        if self.crop_mode and self.crop_start is not None:
+            self.crop_end = self.normalized_point(event.position())
+            a,b = self.crop_start
+            c,d = self.crop_end
+            self.crop_start = self.crop_end = None
+            if abs(c-a) >= .01 and abs(d-b) >= .01:
+                self.crop_mode = False
+                self.cropSelected.emit((min(a,c), min(b,d), max(a,c), max(b,d)))
+            self.update()
+            return
         self.dragging = ''
         self.show_original = False
         self.update()
 
     def resizeEvent(self, event):
         self.update()
+
+    def normalized_point(self, position):
+        x,y = self.image_point(position)
+        return (min(1.0, max(0.0, x/self.photo.width)),
+                min(1.0, max(0.0, y/self.photo.height)))
