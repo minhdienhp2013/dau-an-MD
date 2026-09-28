@@ -33,6 +33,15 @@ class Settings:
     stroke_color: str = '#000000'
     stroke_width: float = .003
     shadow: bool = False
+    custom_text: str = ''
+    custom_enabled: bool = True
+    custom_x: float = .5
+    custom_y: float = .5
+    custom_font_size: float = .045
+    custom_bold: bool = True
+    custom_color: str = '#ffffff'
+    custom_stroke_color: str = '#000000'
+    custom_stroke_width: float = .003
     output_dir: str = ''
     output_format: str = 'Giữ định dạng gốc'
     quality: int = 95
