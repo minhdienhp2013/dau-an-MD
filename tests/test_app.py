@@ -12,14 +12,18 @@ from core.watermark_processor import render
 
 class ImageTests(unittest.TestCase):
     def test_render_and_scaled_positions(self):
-        s = Settings(phone='0912 345 678', logo_x=.7, logo_y=.7, phone_x=.5, phone_y=.9)
+        s = Settings(phone='0912 345 678', logo_x=.7, logo_y=.7, phone_x=.5, phone_y=.9,
+                     custom_text='Cửa hàng Minh Điến\nĐại Lộc 1 - Kiến Hải - Hải Phòng')
         logo = Image.new('RGBA', (100, 50), 'red')
         for size in [(900,600),(600,900),(700,700)]:
             result = render(Image.new('RGB', size, 'navy'), s, logo)
             self.assertEqual(result.image.size, size)
             self.assertIn('logo', result.boxes)
             self.assertIn('phone', result.boxes)
+            self.assertIn('custom', result.boxes)
             a,b,c,d = result.boxes['logo']
+            self.assertTrue(0 <= a < c <= size[0] and 0 <= b < d <= size[1])
+            a,b,c,d = result.boxes['custom']
             self.assertTrue(0 <= a < c <= size[0] and 0 <= b < d <= size[1])
 
     def test_remove_background_preserves_internal_white(self):
@@ -102,7 +106,8 @@ class UiTests(unittest.TestCase):
                 Image.new('RGB', (400, 300), 'navy').save(source)
                 window.add_paths([str(source)])
                 window.logo = Image.new('RGBA', (100, 40), 'red')
-                window.settings.phone = '0912 345 678'
+                window.phone.setText('0912 345 678')
+                window.custom_text.setPlainText('Nội thất Minh Điến\nZalo 0912 345 678')
                 window.preview.set_logo(window.logo)
                 window.preview.resize(700, 550)
                 window.show(); app.processEvents()
@@ -126,8 +131,14 @@ class UiTests(unittest.TestCase):
                 QTest.mouseMove(widget, point(160,100))
                 QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=point(160,100))
                 self.assertLess(window.settings.phone_x, .6)
+                a,b,c,d = widget.boxes['custom']
+                QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=point((a+c)//2,(b+d)//2))
+                QTest.mouseMove(widget, point(180,140))
+                QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=point(180,140))
+                self.assertLess(window.settings.custom_x, .6)
                 window.save_current()
                 self.assertAlmostEqual(PresetStore().current()[1].phone_x, window.settings.phone_x)
+                self.assertEqual(PresetStore().current()[1].custom_text, 'Nội thất Minh Điến\nZalo 0912 345 678')
                 window.close()
             finally:
                 if prior is None: os.environ.pop('APPDATA', None)
