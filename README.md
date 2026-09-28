@@ -4,7 +4,7 @@
 
 ## Chạy trên Windows
 
-Cài Python 3.11 hoặc 3.12 từ python.org (chọn **Add Python to PATH**). Nhấp đúp `RUN.bat`; lần đầu chương trình tự tạo `.venv` và cài PySide6, Pillow. Sau đó thêm ảnh/thư mục vào khung trái, chọn logo và nhập số điện thoại, kéo trực tiếp trên ảnh, chọn thư mục xuất, nhấn **XỬ LÝ TẤT CẢ ẢNH**.
+Cài Python 3.11 hoặc 3.12 từ python.org (chọn **Add Python to PATH**). Nhấp đúp `RUN.bat`; lần đầu chương trình tự tạo `.venv` và cài PySide6, Pillow. Sau đó kéo ảnh/thư mục từ Explorer vào bất kỳ vùng nào của cửa sổ (kể cả preview), hoặc dùng nút Thêm ảnh; chọn logo và nhập số điện thoại, kéo trực tiếp trên ảnh, chọn thư mục xuất, nhấn **XỬ LÝ TẤT CẢ ẢNH**.
 
 Chọn đối tượng ở dưới preview rồi dùng 9 nút căn nhanh. Kéo góc xanh dưới phải logo để đổi kích thước; có thể dùng thanh trượt. Giữ nút xem ảnh gốc để đối chiếu. Mẫu tự lưu trong `%APPDATA%\WatermarkMinhDien` và được nhớ khi mở lại; có thể tạo, đổi tên hoặc xóa mẫu.
 
