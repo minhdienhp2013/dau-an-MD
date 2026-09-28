@@ -13,14 +13,16 @@ class RenderResult:
     boxes: dict[str, tuple[int, int, int, int]]
 
 
-def font_for(settings: Settings, size: int):
+def font_for(settings: Settings, size: int, bold: bool | None = None):
+    if bold is None:
+        bold = settings.bold
     names = {'Arial': ('arial.ttf','arialbd.ttf'), 'Segoe UI': ('segoeui.ttf','segoeuib.ttf'),
              'Calibri': ('calibri.ttf','calibrib.ttf'), 'Tahoma': ('tahoma.ttf','tahomabd.ttf'),
              'Verdana': ('verdana.ttf','verdanab.ttf'), 'Times New Roman': ('times.ttf','timesbd.ttf')}
     pair = names.get(settings.font_name, names['Arial'])
-    candidates = [settings.font_path, 'C:/Windows/Fonts/' + pair[int(settings.bold)],
-                  'C:/Windows/Fonts/segoeuib.ttf' if settings.bold else 'C:/Windows/Fonts/segoeui.ttf',
-                  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf' if settings.bold else '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']
+    candidates = [settings.font_path if bold == settings.bold else '', 'C:/Windows/Fonts/' + pair[int(bold)],
+                  'C:/Windows/Fonts/segoeuib.ttf' if bold else 'C:/Windows/Fonts/segoeui.ttf',
+                  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf' if bold else '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']
     for path in candidates:
         if path and Path(path).is_file():
             try:
@@ -28,6 +30,32 @@ def font_for(settings: Settings, size: int):
             except OSError:
                 pass
     return ImageFont.load_default(size=size)
+
+
+def wrap_text(text: str, draw: ImageDraw.ImageDraw, font, max_width: int) -> str:
+    """Keep explicit line breaks and wrap long lines to the image width."""
+    lines = []
+    for paragraph in text.split('\n'):
+        if not paragraph:
+            lines.append('')
+            continue
+        line = ''
+        for word in paragraph.split(' '):
+            proposed = f'{line} {word}' if line else word
+            if line and draw.textlength(proposed, font=font) > max_width:
+                lines.append(line)
+                line = word
+            else:
+                line = proposed
+            # Split a word that is itself wider than the available image width.
+            while line and draw.textlength(line, font=font) > max_width:
+                cut = max(1, len(line) - 1)
+                while cut > 1 and draw.textlength(line[:cut], font=font) > max_width:
+                    cut -= 1
+                lines.append(line[:cut])
+                line = line[cut:]
+        lines.append(line)
+    return '\n'.join(lines)
 
 
 def render(image: Image.Image, settings: Settings, logo: Image.Image | None = None) -> RenderResult:
@@ -65,4 +93,20 @@ def render(image: Image.Image, settings: Settings, logo: Image.Image | None = No
         draw.text(actual, settings.phone, font=font, fill=settings.text_color,
                   stroke_width=stroke, stroke_fill=settings.stroke_color)
         boxes['phone'] = (x, y, x+tw, y+th)
+    if settings.custom_enabled and settings.custom_text.strip():
+        font_size = max(8, round(scale * max(.008, min(.3, settings.custom_font_size))))
+        stroke = max(0, round(scale * settings.custom_stroke_width))
+        font = font_for(settings, font_size, settings.custom_bold)
+        draw = ImageDraw.Draw(base)
+        content = wrap_text(settings.custom_text, draw, font, max(1, round(w * .88)))
+        spacing = max(2, round(font_size * .15))
+        bbox = draw.multiline_textbbox((0, 0), content, font=font, spacing=spacing,
+                                       stroke_width=stroke, align='center')
+        tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
+        x = min(max(0, round(settings.custom_x*w-tw/2)), max(0, w-tw))
+        y = min(max(0, round(settings.custom_y*h-th/2)), max(0, h-th))
+        draw.multiline_text((x-bbox[0], y-bbox[1]), content, font=font, spacing=spacing,
+                            align='center', fill=settings.custom_color, stroke_width=stroke,
+                            stroke_fill=settings.custom_stroke_color)
+        boxes['custom'] = (x, y, x+tw, y+th)
     return RenderResult(base, boxes)
