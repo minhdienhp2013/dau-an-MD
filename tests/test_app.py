@@ -1,0 +1,101 @@
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from PIL import Image, ImageDraw
+
+from core.config import Settings
+from core.background_remove import remove_solid_background
+from core.batch_processor import export_one
+from core.watermark_processor import render
+
+
+class ImageTests(unittest.TestCase):
+    def test_render_and_scaled_positions(self):
+        s = Settings(phone='0912 345 678', logo_x=.7, logo_y=.7, phone_x=.5, phone_y=.9)
+        logo = Image.new('RGBA', (100, 50), 'red')
+        for size in [(900,600),(600,900),(700,700)]:
+            result = render(Image.new('RGB', size, 'navy'), s, logo)
+            self.assertEqual(result.image.size, size)
+            self.assertIn('logo', result.boxes)
+            self.assertIn('phone', result.boxes)
+            a,b,c,d = result.boxes['logo']
+            self.assertTrue(0 <= a < c <= size[0] and 0 <= b < d <= size[1])
+
+    def test_remove_background_preserves_internal_white(self):
+        image = Image.new('RGB', (60,60), 'white')
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((10,10,50,50), fill='red')
+        draw.rectangle((20,20,40,40), fill='white')
+        result = remove_solid_background(image, 20, 0)
+        self.assertEqual(result.getpixel((0,0))[3], 0)
+        self.assertEqual(result.getpixel((30,30))[3], 255)
+
+    def test_jpg_png_exif_and_no_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            jpg = folder/'product.jpg'; png = folder/'other.png'
+            im = Image.new('RGB', (160,80), 'blue')
+            exif = Image.Exif(); exif[274] = 6
+            im.save(jpg, exif=exif)
+            Image.new('RGBA', (120,120), 'green').save(png)
+            s = Settings(phone='0123')
+            outputs = [export_one(str(jpg), tmp, s), export_one(str(jpg), tmp, s), export_one(str(png), tmp, s)]
+            self.assertEqual([p.name for p in outputs], ['product_watermark.jpg','product_watermark_2.jpg','other_watermark.png'])
+            with Image.open(jpg) as original, Image.open(outputs[0]) as exported, Image.open(outputs[2]) as other:
+                self.assertEqual(original.size, (160,80))
+                self.assertEqual(exported.size, (80,160))
+                self.assertEqual(other.format, 'PNG')
+            self.assertEqual(len(list(folder.glob('*watermark*'))), 3)
+
+
+if __name__ == '__main__': unittest.main()
+
+
+class UiTests(unittest.TestCase):
+    def test_preview_drag_resize_and_preset_persistence(self):
+        from PySide6.QtWidgets import QApplication
+        from PySide6.QtCore import QPoint, Qt
+        from PySide6.QtTest import QTest
+        from ui.main_window import MainWindow
+        from core.presets import PresetStore
+        with tempfile.TemporaryDirectory() as tmp:
+            prior = os.environ.get('APPDATA')
+            os.environ['APPDATA'] = tmp
+            try:
+                app = QApplication.instance() or QApplication([])
+                window = MainWindow()
+                source = Path(tmp) / 'sample.png'
+                Image.new('RGB', (400, 300), 'navy').save(source)
+                window.add_paths([str(source)])
+                window.logo = Image.new('RGBA', (100, 40), 'red')
+                window.settings.phone = '0912 345 678'
+                window.preview.set_logo(window.logo)
+                window.preview.resize(700, 550)
+                window.show(); app.processEvents()
+                widget = window.preview
+                rect = widget.photo_rect()
+                def point(x, y):
+                    return QPoint(round(rect.x()+x*rect.width()/400), round(rect.y()+y*rect.height()/300))
+                a,b,c,d = widget.boxes['logo']
+                QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=point((a+c)//2,(b+d)//2))
+                QTest.mouseMove(widget, point(120, 90))
+                QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=point(120,90))
+                self.assertLess(window.settings.logo_x, .5)
+                a,b,c,d = widget.boxes['logo']
+                old_size = window.settings.logo_size
+                QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=point(c,d))
+                QTest.mouseMove(widget, point(c+30,d+10))
+                QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=point(c+30,d+10))
+                self.assertGreater(window.settings.logo_size, old_size)
+                a,b,c,d = widget.boxes['phone']
+                QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=point((a+c)//2,(b+d)//2))
+                QTest.mouseMove(widget, point(160,100))
+                QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=point(160,100))
+                self.assertLess(window.settings.phone_x, .6)
+                window.save_current()
+                self.assertAlmostEqual(PresetStore().current()[1].phone_x, window.settings.phone_x)
+                window.close()
+            finally:
+                if prior is None: os.environ.pop('APPDATA', None)
+                else: os.environ['APPDATA'] = prior
