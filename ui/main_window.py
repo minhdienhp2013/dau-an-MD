@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from PIL import Image
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, QEvent
 from PySide6.QtGui import QColor, QDragEnterEvent
 from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox, QFileDialog,
     QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QListWidget,
@@ -15,7 +15,7 @@ from core.batch_processor import BatchWorker
 from core.config import Settings
 from core.presets import PresetStore
 from ui.preview_scene import PreviewWidget
-from utils.image_utils import collect_images, thumbnail
+from utils.image_utils import SUPPORTED, collect_images, thumbnail
 
 
 class DropList(QListWidget):
@@ -60,8 +60,24 @@ class MainWindow(QMainWindow):
         self.autosave.setInterval(650)
         self.autosave.timeout.connect(self.save_current)
         self.build_ui()
+        self.setAcceptDrops(True)
+        QApplication.instance().installEventFilter(self)
         self.apply_settings()
         self.load_logo()
+
+    def eventFilter(self, watched, event):
+        # Catch Explorer drops before controls such as QLineEdit consume file URLs.
+        # Only handle this application's window, leaving native file dialogs alone.
+        if (event.type() in (QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop)
+                and isinstance(watched, QWidget) and watched.window() is self
+                and event.mimeData().hasUrls()):
+            paths = [u.toLocalFile() for u in event.mimeData().urls() if u.isLocalFile()]
+            if any(Path(path).is_dir() or Path(path).suffix.lower() in SUPPORTED for path in paths):
+                if event.type() == QEvent.Type.Drop:
+                    self.add_paths(paths)
+                event.acceptProposedAction()
+                return True
+        return super().eventFilter(watched, event)
 
     def button(self, label, action):
         b = QPushButton(label)
@@ -379,4 +395,5 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, 'Đang xử lý', 'Vui lòng chờ xử lý ảnh hoàn tất.')
             event.ignore(); return
         self.autosave.stop(); self.save_current()
+        QApplication.instance().removeEventFilter(self)
         super().closeEvent(event)
