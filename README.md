@@ -10,6 +10,8 @@ Chọn đối tượng ở dưới preview rồi dùng 9 nút căn nhanh. Kéo g
 
 Mục **Nội dung tùy chỉnh** cho phép nhập nhiều dòng như lời giới thiệu, địa chỉ, Zalo. Chữ này có vị trí, kích thước, màu, viền và công tắc hiển thị riêng; kéo trực tiếp trên preview hoặc chọn nó ở menu dưới ảnh rồi dùng 9 nút căn nhanh. Nội dung được lưu trong từng mẫu và tự áp dụng khi xuất hàng loạt.
 
+Để cắt xén, chọn ảnh rồi nhấn **✂ Cắt ảnh**, kéo chuột khoanh phần muốn giữ trên preview. Bấm **Bỏ cắt** để trở lại ảnh đầy đủ. Mặc định khung cắt chỉ áp dụng cho ảnh đang chọn; tích **Áp dụng khung cắt cho tất cả ảnh** để dùng cùng tỷ lệ cắt cho mọi ảnh. Crop được thực hiện trước khi đóng watermark lúc xuất, không sửa ảnh gốc. Các khung cắt được giữ trong phiên làm việc hiện tại.
+
 ## Xóa nền logo
 
 **Xóa nền nhanh** dùng màu ở góc ảnh, giữ các vùng màu tương tự nằm tách khỏi mép. Chỉnh ngưỡng và độ mềm trước khi bấm. Dùng **Lưu logo PNG trong suốt** nếu muốn sử dụng riêng tệp đó. Kết quả trong mẫu được tự lưu trong AppData.
