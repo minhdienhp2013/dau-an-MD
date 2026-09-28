@@ -53,6 +53,39 @@ if __name__ == '__main__': unittest.main()
 
 
 class UiTests(unittest.TestCase):
+    def test_explorer_drop_on_preview_and_text_field(self):
+        from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+        from PySide6.QtGui import QDragEnterEvent, QDropEvent
+        from PySide6.QtWidgets import QApplication
+        from ui.main_window import MainWindow
+        with tempfile.TemporaryDirectory() as tmp:
+            old = os.environ.get('APPDATA')
+            os.environ['APPDATA'] = tmp
+            try:
+                app = QApplication.instance() or QApplication([])
+                window = MainWindow(); window.show(); app.processEvents()
+                image = Path(tmp)/'a.jpg'
+                Image.new('RGB', (80, 80), 'red').save(image)
+                nested = Path(tmp)/'folder'; nested.mkdir()
+                Image.new('RGB', (80, 80), 'blue').save(nested/'b.png')
+                mime = QMimeData()
+                mime.setUrls([QUrl.fromLocalFile(str(image)), QUrl.fromLocalFile(str(nested))])
+                enter = QDragEnterEvent(QPoint(10, 10), Qt.DropAction.CopyAction, mime,
+                                       Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+                app.sendEvent(window.preview, enter)
+                self.assertTrue(enter.isAccepted())
+                drop = QDropEvent(QPointF(10, 10), Qt.DropAction.CopyAction, mime,
+                                  Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+                app.sendEvent(window.preview, drop)
+                self.assertEqual(window.list.count(), 2)
+                app.sendEvent(window.phone, QDropEvent(QPointF(10, 10), Qt.DropAction.CopyAction, mime,
+                              Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+                self.assertEqual(window.list.count(), 2)  # no duplicates
+                window.close()
+            finally:
+                if old is None: os.environ.pop('APPDATA', None)
+                else: os.environ['APPDATA'] = old
+
     def test_preview_drag_resize_and_preset_persistence(self):
         from PySide6.QtWidgets import QApplication
         from PySide6.QtCore import QPoint, Qt
