@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw
 from core.config import Settings
 from core.background_remove import remove_solid_background
 from core.batch_processor import export_one
+from core.crop import crop_normalized
 from core.watermark_processor import render
 
 
@@ -52,11 +53,62 @@ class ImageTests(unittest.TestCase):
                 self.assertEqual(other.format, 'PNG')
             self.assertEqual(len(list(folder.glob('*watermark*'))), 3)
 
+    def test_crop_before_watermark_and_keep_original(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)/'sofa.png'
+            Image.new('RGB', (400, 200), 'blue').save(source)
+            region = (.25, .1, .75, .9)
+            preview = crop_normalized(Image.open(source), region)
+            output = export_one(str(source), tmp, Settings(phone='0912 345 678'), crop=region)
+            with Image.open(output) as exported, Image.open(source) as original:
+                self.assertEqual(preview.size, exported.size)
+                self.assertEqual(exported.size, (200, 160))
+                self.assertEqual(original.size, (400, 200))
+
 
 if __name__ == '__main__': unittest.main()
 
 
 class UiTests(unittest.TestCase):
+    def test_crop_selection_and_apply_to_all(self):
+        from PySide6.QtWidgets import QApplication
+        from PySide6.QtCore import QPoint, Qt
+        from PySide6.QtTest import QTest
+        from ui.main_window import MainWindow
+        with tempfile.TemporaryDirectory() as tmp:
+            old = os.environ.get('APPDATA')
+            os.environ['APPDATA'] = tmp
+            try:
+                app = QApplication.instance() or QApplication([])
+                window = MainWindow(); window.show()
+                a, b = Path(tmp)/'a.png', Path(tmp)/'b.png'
+                Image.new('RGB', (400, 300), 'red').save(a)
+                Image.new('RGB', (300, 400), 'blue').save(b)
+                window.add_paths([str(a), str(b)])
+                app.processEvents()
+                window.start_crop()
+                widget = window.preview
+                rect = widget.photo_rect()
+                def at(x, y):
+                    return QPoint(round(rect.x()+rect.width()*x), round(rect.y()+rect.height()*y))
+                QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=at(.2,.2))
+                QTest.mouseMove(widget, at(.8,.8))
+                QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=at(.8,.8))
+                self.assertEqual(len(window.crop_regions), 1)
+                self.assertEqual(widget.photo.size, (240,180))
+                window.list.setCurrentRow(1)
+                self.assertEqual(widget.photo.size, (300,400))
+                window.list.setCurrentRow(0)
+                window.crop_all.setChecked(True)
+                window.list.setCurrentRow(1)
+                self.assertEqual(widget.photo.size, (180,240))
+                window.clear_crop()
+                self.assertEqual(widget.photo.size, (300,400))
+                window.close()
+            finally:
+                if old is None: os.environ.pop('APPDATA', None)
+                else: os.environ['APPDATA'] = old
+
     def test_explorer_drop_on_preview_and_text_field(self):
         from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
         from PySide6.QtGui import QDragEnterEvent, QDropEvent
