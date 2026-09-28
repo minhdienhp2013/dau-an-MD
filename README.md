@@ -8,6 +8,8 @@ Cài Python 3.11 hoặc 3.12 từ python.org (chọn **Add Python to PATH**). Nh
 
 Chọn đối tượng ở dưới preview rồi dùng 9 nút căn nhanh. Kéo góc xanh dưới phải logo để đổi kích thước; có thể dùng thanh trượt. Giữ nút xem ảnh gốc để đối chiếu. Mẫu tự lưu trong `%APPDATA%\WatermarkMinhDien` và được nhớ khi mở lại; có thể tạo, đổi tên hoặc xóa mẫu.
 
+Mục **Nội dung tùy chỉnh** cho phép nhập nhiều dòng như lời giới thiệu, địa chỉ, Zalo. Chữ này có vị trí, kích thước, màu, viền và công tắc hiển thị riêng; kéo trực tiếp trên preview hoặc chọn nó ở menu dưới ảnh rồi dùng 9 nút căn nhanh. Nội dung được lưu trong từng mẫu và tự áp dụng khi xuất hàng loạt.
+
 ## Xóa nền logo
 
 **Xóa nền nhanh** dùng màu ở góc ảnh, giữ các vùng màu tương tự nằm tách khỏi mép. Chỉnh ngưỡng và độ mềm trước khi bấm. Dùng **Lưu logo PNG trong suốt** nếu muốn sử dụng riêng tệp đó. Kết quả trong mẫu được tự lưu trong AppData.
