@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox,
 from core.background_remove import remove_ai_background, remove_solid_background
 from core.batch_processor import BatchWorker
 from core.config import Settings
+from core.crop import crop_normalized
 from core.presets import PresetStore
 from ui.preview_scene import PreviewWidget
 from utils.image_utils import SUPPORTED, collect_images, thumbnail
@@ -53,6 +54,8 @@ class MainWindow(QMainWindow):
         self.logo = None
         self.logo_dirty = False
         self.sources = []
+        self.crop_regions = {}
+        self.shared_crop = None
         self.worker = None
         self.suppress = False
         self.autosave = QTimer(self)
@@ -109,6 +112,14 @@ class MainWindow(QMainWindow):
         cl.addWidget(self.preview, 1)
         self.preview.changed.connect(self.preview_changed)
         self.preview.selected.connect(self.set_selected)
+        self.preview.cropSelected.connect(self.crop_selected)
+        crop_row = QHBoxLayout()
+        crop_row.addWidget(self.button('✂ Cắt ảnh', self.start_crop))
+        crop_row.addWidget(self.button('Bỏ cắt', self.clear_crop))
+        cl.addLayout(crop_row)
+        self.crop_all = QCheckBox('Áp dụng khung cắt cho tất cả ảnh')
+        self.crop_all.toggled.connect(self.toggle_crop_all)
+        cl.addWidget(self.crop_all)
         self.object_choice = QComboBox(); self.object_choice.addItems(['Logo','Số điện thoại','Nội dung tùy chỉnh'])
         self.object_choice.currentIndexChanged.connect(self.select_object)
         cl.addWidget(self.object_choice)
@@ -284,16 +295,65 @@ class MainWindow(QMainWindow):
     def remove_one(self):
         row = self.list.currentRow()
         if row >= 0:
+            self.crop_regions.pop(self.sources[row], None)
             self.sources.pop(row); self.list.takeItem(row)
             if not self.sources: self.preview.set_photo(None)
 
     def clear_images(self):
-        self.sources.clear(); self.list.clear(); self.preview.set_photo(None)
+        self.sources.clear(); self.crop_regions.clear(); self.shared_crop = None
+        self.list.clear(); self.preview.set_photo(None)
 
     def show_photo(self, row):
         if row >= 0 and row < len(self.sources):
-            try: self.preview.set_photo(thumbnail(self.sources[row]))
+            try:
+                self.preview.crop_mode = False
+                self.preview.crop_start = self.preview.crop_end = None
+                region = self.shared_crop if self.crop_all.isChecked() else self.crop_regions.get(self.sources[row])
+                self.preview.set_photo(crop_normalized(thumbnail(self.sources[row]), region))
             except Exception as exc: QMessageBox.warning(self, 'Không thể mở ảnh', str(exc))
+
+    def start_crop(self):
+        row = self.list.currentRow()
+        if row < 0 or row >= len(self.sources):
+            return QMessageBox.information(self, 'Chưa có ảnh', 'Hãy chọn ảnh để cắt.')
+        if self.preview.crop_mode:
+            self.preview.crop_mode = False
+            self.show_photo(row)
+            self.status.setText('Đã hủy thao tác cắt.')
+            return
+        try:
+            # Always draw the selection on the original upright image, never on a prior crop.
+            self.preview.set_photo(thumbnail(self.sources[row]))
+            self.preview.crop_mode = True
+            self.preview.update()
+            self.status.setText('Kéo chuột trên ảnh để khoanh vùng muốn giữ lại.')
+        except Exception as exc:
+            QMessageBox.warning(self, 'Không thể mở ảnh', str(exc))
+
+    def crop_selected(self, region):
+        row = self.list.currentRow()
+        if row < 0 or row >= len(self.sources): return
+        if self.crop_all.isChecked(): self.shared_crop = region
+        else: self.crop_regions[self.sources[row]] = region
+        self.show_photo(row)
+        self.status.setText('Đã cắt trong preview. Ảnh gốc không thay đổi; khung cắt sẽ dùng khi xuất.')
+
+    def toggle_crop_all(self, checked):
+        row = self.list.currentRow()
+        if checked and 0 <= row < len(self.sources):
+            self.shared_crop = self.crop_regions.get(self.sources[row])
+        self.preview.crop_mode = False
+        self.preview.crop_start = self.preview.crop_end = None
+        self.show_photo(row)
+
+    def clear_crop(self):
+        row = self.list.currentRow()
+        self.preview.crop_mode = False
+        self.preview.crop_start = self.preview.crop_end = None
+        if self.crop_all.isChecked(): self.shared_crop = None
+        elif 0 <= row < len(self.sources): self.crop_regions.pop(self.sources[row], None)
+        self.show_photo(row)
+        self.status.setText('Đã bỏ khung cắt.')
 
     def load_logo(self):
         self.logo = None
@@ -401,7 +461,10 @@ class MainWindow(QMainWindow):
         self.autosave.stop(); self.save_current()
         self.progress.setRange(0, len(self.sources)); self.progress.setValue(0)
         self.export.setEnabled(False)
-        self.worker = BatchWorker(self.sources.copy(), self.settings.output_dir, replace(self.settings), self.logo)
+        shared = self.shared_crop if self.crop_all.isChecked() else None
+        crops = {} if self.crop_all.isChecked() else self.crop_regions
+        self.worker = BatchWorker(self.sources.copy(), self.settings.output_dir, replace(self.settings),
+                                  self.logo, crops, shared)
         self.worker.progress.connect(self.on_progress)
         self.worker.completed.connect(self.on_completed)
         self.worker.start()
