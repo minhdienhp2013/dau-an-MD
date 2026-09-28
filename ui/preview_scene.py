@@ -88,7 +88,7 @@ class PreviewWidget(QWidget):
         if event.button() != Qt.MouseButton.LeftButton or self.photo is None:
             return
         x, y = self.image_point(event.position())
-        for key in ('phone','logo'):
+        for key in ('custom','phone','logo'):
             if key in self.boxes:
                 a,b,c,d = self.boxes[key]
                 if key == 'logo' and abs(x-c)<18 and abs(y-d)<18:
