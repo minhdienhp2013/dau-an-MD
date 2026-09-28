@@ -5,6 +5,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 
 from core.config import Settings
+from core.crop import CropRect, crop_normalized
 from core.watermark_processor import render
 from utils.image_utils import open_upright
 
@@ -22,7 +23,8 @@ def unique_target(folder: Path, source: Path, fmt: str) -> Path:
     return candidate
 
 
-def export_one(source: str, folder: str, settings: Settings, logo: Image.Image | None = None) -> Path:
+def export_one(source: str, folder: str, settings: Settings, logo: Image.Image | None = None,
+               crop: CropRect | None = None) -> Path:
     src = Path(source).resolve()
     dest_dir = Path(folder).resolve()
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -31,6 +33,7 @@ def export_one(source: str, folder: str, settings: Settings, logo: Image.Image |
         fmt = {'.jpg':'JPG','.jpeg':'JPG','.png':'PNG','.webp':'WEBP','.bmp':'BMP'}[src.suffix.lower()]
     output = unique_target(dest_dir, src, settings.output_format)
     image = open_upright(src)
+    image = crop_normalized(image, crop)
     result = render(image, settings, logo).image
     if fmt == 'JPG':
         result = result.convert('RGB')
@@ -50,16 +53,20 @@ class BatchWorker(QThread):
     progress = Signal(int, int, str)
     completed = Signal(list, list)
 
-    def __init__(self, sources: list[str], folder: str, settings: Settings, logo: Image.Image | None):
+    def __init__(self, sources: list[str], folder: str, settings: Settings, logo: Image.Image | None,
+                 crops: dict[str, CropRect] | None = None, shared_crop: CropRect | None = None):
         super().__init__()
         self.sources, self.folder, self.settings = sources, folder, settings
         self.logo = logo.copy() if logo is not None else None
+        self.crops = dict(crops or {})
+        self.shared_crop = shared_crop
 
     def run(self):
         outputs, errors = [], []
         for i, path in enumerate(self.sources, 1):
             try:
-                outputs.append(str(export_one(path, self.folder, self.settings, self.logo)))
+                region = self.shared_crop if self.shared_crop is not None else self.crops.get(path)
+                outputs.append(str(export_one(path, self.folder, self.settings, self.logo, region)))
             except Exception as exc:
                 errors.append(f'{Path(path).name}: {exc}')
             self.progress.emit(i, len(self.sources), Path(path).name)
