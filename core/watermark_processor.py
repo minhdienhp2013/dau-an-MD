@@ -20,7 +20,19 @@ def font_for(settings: Settings, size: int, bold: bool | None = None):
              'Calibri': ('calibri.ttf','calibrib.ttf'), 'Tahoma': ('tahoma.ttf','tahomabd.ttf'),
              'Verdana': ('verdana.ttf','verdanab.ttf'), 'Times New Roman': ('times.ttf','timesbd.ttf')}
     pair = names.get(settings.font_name, names['Arial'])
-    candidates = [settings.font_path if bold == settings.bold else '', 'C:/Windows/Fonts/' + pair[int(bold)],
+    mac_names = {
+        'Arial': ('Arial.ttf', 'Arial Bold.ttf'),
+        'Helvetica': ('Helvetica.ttc', 'Helvetica.ttc'),
+        'Times New Roman': ('Times New Roman.ttf', 'Times New Roman Bold.ttf'),
+        'Verdana': ('Verdana.ttf', 'Verdana Bold.ttf'),
+        'Tahoma': ('Tahoma.ttf', 'Tahoma Bold.ttf'),
+    }
+    mac_pair = mac_names.get(settings.font_name, mac_names['Arial'])
+    candidates = [settings.font_path if bold == settings.bold else '',
+                  '/System/Library/Fonts/Supplemental/' + mac_pair[int(bold)],
+                  '/Library/Fonts/' + mac_pair[int(bold)],
+                  '/System/Library/Fonts/Helvetica.ttc',
+                  'C:/Windows/Fonts/' + pair[int(bold)],
                   'C:/Windows/Fonts/segoeuib.ttf' if bold else 'C:/Windows/Fonts/segoeui.ttf',
                   '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf' if bold else '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']
     for path in candidates:

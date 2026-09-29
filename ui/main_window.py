@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import sys
 from PIL import Image
 from PySide6.QtCore import Qt, QTimer, Signal, QEvent
 from PySide6.QtGui import QColor, QDragEnterEvent
@@ -163,7 +164,10 @@ class MainWindow(QMainWindow):
         phone_box = QGroupBox('SỐ ĐIỆN THOẠI'); form = QFormLayout(phone_box)
         self.phone_on = QCheckBox('Hiện số điện thoại'); form.addRow(self.phone_on)
         self.phone = QLineEdit(); self.phone.setPlaceholderText('0912 345 678'); form.addRow('Số điện thoại', self.phone)
-        self.font_combo = QComboBox(); self.font_combo.addItems(['Arial','Segoe UI','Calibri','Tahoma','Verdana','Times New Roman'])
+        self.font_combo = QComboBox()
+        fonts = (['Arial','Helvetica','Times New Roman','Verdana','Tahoma'] if sys.platform == 'darwin'
+                 else ['Arial','Segoe UI','Calibri','Tahoma','Verdana','Times New Roman'])
+        self.font_combo.addItems(fonts)
         form.addRow('Font chữ', self.font_combo)
         self.font_size = self.slider(1, 25); form.addRow('Cỡ chữ %', self.font_size)
         self.bold = QCheckBox('Chữ đậm'); form.addRow(self.bold)

@@ -2,9 +2,10 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from PIL import Image, ImageDraw
 
-from core.config import Settings
+from core.config import Settings, data_dir
 from core.background_remove import remove_solid_background
 from core.batch_processor import export_one
 from core.crop import crop_normalized
@@ -12,6 +13,11 @@ from core.watermark_processor import render
 
 
 class ImageTests(unittest.TestCase):
+    def test_macos_settings_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch('core.config.sys.platform', 'darwin'), patch('core.config.Path.home', return_value=Path(tmp)):
+                self.assertEqual(data_dir(), Path(tmp)/'Library'/'Application Support'/'WatermarkMinhDien')
+
     def test_render_and_scaled_positions(self):
         s = Settings(phone='0912 345 678', logo_x=.7, logo_y=.7, phone_x=.5, phone_y=.9,
                      custom_text='Cửa hàng Minh Điến\nĐại Lộc 1 - Kiến Hải - Hải Phòng')

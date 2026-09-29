@@ -1,6 +1,16 @@
 # WATERMARK MINH ĐIẾN
 
-Ứng dụng Windows 10/11 để đóng logo và số điện thoại lên ảnh sản phẩm. Ảnh gốc luôn được giữ nguyên.
+Ứng dụng Windows 10/11 và macOS để đóng logo, số điện thoại và nội dung tùy chỉnh lên ảnh sản phẩm. Ảnh gốc luôn được giữ nguyên.
+
+## Chạy trên Mac M1/M2/M3/M4
+
+Cài **Python 3.11 hoặc 3.12 cho Apple Silicon** từ python.org nếu máy chưa có. Trong Finder, mở thư mục project và nhấp đúp `RUN_MAC.command`. Lần đầu phần mềm tạo `.venv-mac` rồi cài PySide6 và Pillow; các lần sau sử dụng lại thư viện đã cài. Có thể kéo ảnh từ Finder vào cửa sổ ứng dụng.
+
+Nếu macOS không cho mở tệp `.command` mới tải, mở Terminal tại thư mục project và chạy `chmod +x RUN_MAC.command BUILD_MAC.command CAI_XOA_NEN_AI_MAC.command`, rồi chạy `./RUN_MAC.command`. Các tệp `.command` trong repo Git đã có quyền thực thi; lệnh này hữu ích nếu tải project dạng ZIP làm mất quyền đó.
+
+Để tạo ứng dụng có thể nhấp đúp trong Finder, chạy `BUILD_MAC.command` **trên chính máy Mac**. Kết quả là `dist/WatermarkMinhDien.app`; sau khi build, ứng dụng `.app` không yêu cầu Python trên máy sử dụng. Nếu macOS cảnh báo khi mở app tự build, dùng chuột phải vào app và chọn **Open/Mở**. Bản tự build chưa được ký và công chứng bằng tài khoản Apple Developer nên có thể bị macOS yêu cầu xác nhận khi chuyển sang máy khác.
+
+AI xóa nền là tùy chọn: chạy `CAI_XOA_NEN_AI_MAC.command` rồi mở lại ứng dụng. Nếu muốn có AI trong bản `.app`, hãy cài AI **trước khi** chạy `BUILD_MAC.command`. Lần đầu sử dụng AI có thể cần tải mô hình qua Internet. Cấu hình và mẫu trên Mac lưu ở `~/Library/Application Support/WatermarkMinhDien/`.
 
 ## Chạy trên Windows
 

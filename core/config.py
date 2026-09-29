@@ -3,11 +3,15 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, fields
 import json
 import os
+import sys
 from pathlib import Path
 
 
 def data_dir() -> Path:
-    base = Path(os.environ.get('APPDATA', Path.home() / '.config'))
+    if sys.platform == 'darwin':
+        base = Path.home() / 'Library' / 'Application Support'
+    else:
+        base = Path(os.environ.get('APPDATA', Path.home() / '.config'))
     path = base / 'WatermarkMinhDien'
     path.mkdir(parents=True, exist_ok=True)
     return path
