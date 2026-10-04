@@ -28,17 +28,8 @@ if [[ ! -x "$WMD_ENV/bin/python" ]]; then
 fi
 
 "$WMD_ENV/bin/python" -m pip install -r requirements.txt -r requirements-build.txt
-WMD_AI_FLAGS=()
-if "$WMD_ENV/bin/python" -c 'import rembg, onnxruntime' >/dev/null 2>&1; then
-  WMD_AI_FLAGS=(--collect-all rembg --collect-all onnxruntime)
-  echo "Đang đóng gói cả tính năng xóa nền AI."
-else
-  echo "Bản .app sẽ không có AI xóa nền; phần watermark vẫn hoạt động."
-fi
-
-"$WMD_ENV/bin/python" -m PyInstaller --noconfirm --clean --onedir --windowed \
-  --name WatermarkMinhDien --osx-bundle-identifier vn.minhdien.watermark \
-  "${WMD_AI_FLAGS[@]}" main.py
+"$WMD_ENV/bin/python" scripts/build_mac.py
 
 echo "Hoàn thành: $PWD/dist/WatermarkMinhDien.app"
+echo "File gửi sang máy khác: $PWD/dist/WatermarkMinhDien-Mac-$(uname -m).dmg"
 read -r -p "Nhấn Enter để đóng..." _

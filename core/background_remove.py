@@ -49,7 +49,12 @@ def remove_ai_background(image: Image.Image) -> Image.Image:
     try:
         from rembg import remove
     except ImportError as exc:
-        raise RuntimeError('Chưa cài AI xóa nền. Hãy chạy CAI_XOA_NEN_AI.bat trên Windows và mở lại ứng dụng.') from exc
+        import sys
+        if sys.platform == 'darwin':
+            message = 'Bản Mac này chưa có AI xóa nền. Xóa nền nhanh vẫn dùng được. Để dùng AI, cài từ source bằng CAI_XOA_NEN_AI_MAC.command rồi build lại.'
+        else:
+            message = 'Chưa cài AI xóa nền. Hãy chạy CAI_XOA_NEN_AI.bat trên Windows và mở lại ứng dụng.'
+        raise RuntimeError(message) from exc
     buf = BytesIO()
     image.save(buf, 'PNG')
     output = remove(buf.getvalue())

@@ -1,0 +1,55 @@
+name: Đóng gói WATERMARK cho Mac M1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-mac.yml'
+      - 'scripts/build_mac.py'
+      - 'main.py'
+      - 'core/**'
+      - 'ui/**'
+      - 'utils/**'
+      - 'requirements*.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: watermark-mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: arm64
+          cache: pip
+      - name: Cài thư viện
+        run: python -m pip install -r requirements.txt -r requirements-build.txt
+      - name: Kiểm tra source và giao diện
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m compileall -q main.py core ui utils scripts
+          python -m unittest discover -s tests -v
+          python main.py --smoke-test
+      - name: Tạo app và kiểm tra bản đóng gói
+        run: python scripts/build_mac.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WatermarkMinhDien-Mac-M1
+          path: dist/*.dmg
+          if-no-files-found: error
+      - name: Xuất bản file tải về
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="mac-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" dist/WatermarkMinhDien-Mac-arm64.dmg --target "$GITHUB_SHA" --title "WATERMARK MINH ĐIẾN cho Mac M1/M2/M3/M4" --notes "Tải file DMG, mở và kéo ứng dụng vào Applications. Sau đó nhấp đúp WatermarkMinhDien để chạy. Không cần Python. Có logo, số điện thoại, nội dung tùy chỉnh, kéo thả, cắt ảnh, xử lý hàng loạt và xóa nền nhanh. AI xóa nền chưa tích hợp trong bản này. Bản app được ký ad-hoc, chưa công chứng Apple; lần đầu có thể cần chọn Mở vẫn được trong Cài đặt hệ thống > Quyền riêng tư & bảo mật."

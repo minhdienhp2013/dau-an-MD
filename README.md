@@ -2,7 +2,15 @@
 
 Ứng dụng Windows 10/11 và macOS để đóng logo, số điện thoại và nội dung tùy chỉnh lên ảnh sản phẩm. Ảnh gốc luôn được giữ nguyên.
 
-## Chạy trên Mac M1/M2/M3/M4
+## Bản Mac mở trực tiếp, không cần Python
+
+Tải file `WatermarkMinhDien-Mac-arm64.dmg` tại [GitHub Releases](https://github.com/minhdienhp2013/dau-an-MD/releases/latest). Mở DMG, kéo `WatermarkMinhDien.app` vào **Applications / Ứng dụng**, rồi nhấp đúp ứng dụng để chạy. Đây là một biểu tượng ứng dụng trong Finder, chứa sẵn Python và các thư viện. Dữ liệu mẫu lưu riêng trong Application Support.
+
+Bản phát hành dành cho Mac dùng chip Apple Silicon (M1/M2/M3/M4 và mới hơn), được build và kiểm tra trên macOS 15. Chưa có chứng chỉ Apple Developer và công chứng Apple; nếu bị chặn lần đầu, vào **Cài đặt hệ thống → Quyền riêng tư & bảo mật → Mở vẫn được**. Xóa nền nhanh hoạt động; AI chưa tích hợp trong bản tải sẵn.
+
+GitHub Actions tự kiểm tra mã nguồn, tạo app, chạy kiểm tra ngay trong app đã đóng gói, xác minh chữ ký và xuất bản một file DMG. Có thể chạy lại qua Actions → Đóng gói WATERMARK cho Mac M1 → Run workflow.
+
+## Chạy trên Mac M1/M2/M3/M4 bằng source
 
 Cài **Python 3.11 hoặc 3.12 cho Apple Silicon** từ python.org nếu máy chưa có. Trong Finder, mở thư mục project và nhấp đúp `RUN_MAC.command`. Lần đầu phần mềm tạo `.venv-mac` rồi cài PySide6 và Pillow; các lần sau sử dụng lại thư viện đã cài. Có thể kéo ảnh từ Finder vào cửa sổ ứng dụng.
 
