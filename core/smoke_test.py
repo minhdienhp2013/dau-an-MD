@@ -10,12 +10,22 @@ def run(app):
     from core.config import Settings
     from core.background_remove import remove_solid_background
     from ui.main_window import MainWindow
+    from PySide6.QtGui import QPalette, QColor
 
     with TemporaryDirectory() as temp:
         folder = Path(temp)
         previous = presets.data_dir
         presets.data_dir = lambda: folder
         window = None
+        original_palette = app.palette()
+        dark_palette = QPalette(original_palette)
+        for role in (QPalette.ColorRole.Window, QPalette.ColorRole.Base,
+                     QPalette.ColorRole.Button):
+            dark_palette.setColor(role, QColor('#202020'))
+        for role in (QPalette.ColorRole.Text, QPalette.ColorRole.WindowText,
+                     QPalette.ColorRole.ButtonText):
+            dark_palette.setColor(role, QColor('#ffffff'))
+        app.setPalette(dark_palette)
         try:
             window = MainWindow()
             window.show()
@@ -31,6 +41,11 @@ def run(app):
             window.logo = logo
             window.preview.set_logo(logo)
             app.processEvents()
+            # A dark system theme must not produce white text on our light controls.
+            for widget in (window.phone, window.custom_text, window.font_combo):
+                palette = widget.palette()
+                assert palette.color(QPalette.ColorRole.Text).lightness() < 100
+                assert palette.color(QPalette.ColorRole.Base).lightness() > 200
             assert window.list.count() == 2
             assert 'phone' in window.preview.boxes
             assert 'logo' in window.preview.boxes
@@ -49,5 +64,6 @@ def run(app):
             if window is not None:
                 window.close()
             presets.data_dir = previous
+            app.setPalette(original_palette)
     print('WATERMARK_SMOKE_OK', flush=True)
     return 0

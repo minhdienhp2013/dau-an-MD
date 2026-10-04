@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from PIL import Image
 from PySide6.QtCore import Qt, QTimer, Signal, QEvent
-from PySide6.QtGui import QColor, QDragEnterEvent
+from PySide6.QtGui import QColor, QDragEnterEvent, QPalette
 from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox, QFileDialog,
     QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QListWidget,
     QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSlider, QSpinBox,
@@ -46,6 +46,36 @@ class DropList(QListWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        # Keep the light interface readable when macOS uses a dark system palette.
+        palette = QPalette()
+        colors = {
+            QPalette.ColorRole.Window: '#f6f7f9',
+            QPalette.ColorRole.WindowText: '#1f2937',
+            QPalette.ColorRole.Base: '#ffffff',
+            QPalette.ColorRole.AlternateBase: '#f1f5f9',
+            QPalette.ColorRole.Text: '#1f2937',
+            QPalette.ColorRole.Button: '#ffffff',
+            QPalette.ColorRole.ButtonText: '#1f2937',
+            QPalette.ColorRole.ToolTipBase: '#ffffff',
+            QPalette.ColorRole.ToolTipText: '#1f2937',
+            QPalette.ColorRole.Highlight: '#1d4ed8',
+            QPalette.ColorRole.HighlightedText: '#ffffff',
+            QPalette.ColorRole.PlaceholderText: '#64748b',
+            QPalette.ColorRole.Light: '#ffffff',
+            QPalette.ColorRole.Midlight: '#e2e8f0',
+            QPalette.ColorRole.Mid: '#cbd5e1',
+            QPalette.ColorRole.Dark: '#94a3b8',
+            QPalette.ColorRole.Shadow: '#64748b',
+        }
+        for role, color in colors.items():
+            palette.setColor(role, QColor(color))
+        for role in (QPalette.ColorRole.Text, QPalette.ColorRole.WindowText,
+                     QPalette.ColorRole.ButtonText):
+            palette.setColor(QPalette.ColorGroup.Disabled, role, QColor('#64748b'))
+        app = QApplication.instance()
+        app.setStyle('Fusion')
+        app.setPalette(palette)
+        self.setPalette(palette)
         self.setWindowTitle('WATERMARK MINH ĐIẾN')
         self.resize(1400, 850)
         self.store = PresetStore()
@@ -203,7 +233,27 @@ class MainWindow(QMainWindow):
         right.addStretch()
         scroll.setWidget(panel); splitter.addWidget(scroll)
         splitter.setSizes([290, 710, 400])
-        self.setStyleSheet('''QMainWindow {background:#f6f7f9} QGroupBox {font-weight:600;border:1px solid #d9dee6;border-radius:8px;margin-top:12px;padding:12px;background:white} QGroupBox::title {subcontrol-origin:margin;left:12px;padding:0 4px} QPushButton {padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:white} QPushButton:hover {background:#eff6ff} QPushButton#primary {background:#1d4ed8;color:white;font-weight:bold;padding:14px} QLineEdit,QComboBox,QListWidget {padding:5px;border:1px solid #cbd5e1;border-radius:5px}''')
+        self.setStyleSheet('''
+            QWidget {color:#1f2937;selection-background-color:#1d4ed8;selection-color:white}
+            QMainWindow {background:#f6f7f9}
+            QGroupBox {font-weight:600;border:1px solid #d9dee6;border-radius:8px;margin-top:12px;padding:12px;background:white;color:#1f2937}
+            QGroupBox::title {subcontrol-origin:margin;left:12px;padding:0 4px;color:#1f2937}
+            QPushButton {padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:white;color:#1f2937}
+            QPushButton:hover {background:#eff6ff}
+            QPushButton:disabled {color:#64748b;background:#f1f5f9}
+            QPushButton#primary {background:#1d4ed8;color:white;font-weight:bold;padding:14px}
+            QPushButton#primary:disabled {background:#94a3b8;color:white}
+            QLineEdit,QTextEdit,QComboBox,QListWidget,QSpinBox {
+                padding:5px;border:1px solid #cbd5e1;border-radius:5px;
+                background:white;color:#1f2937
+            }
+            QComboBox QAbstractItemView {background:white;color:#1f2937;selection-background-color:#1d4ed8;selection-color:white}
+            QListWidget {alternate-background-color:#f1f5f9}
+            QListWidget::item:selected {background:#1d4ed8;color:white}
+            QProgressBar {border:1px solid #cbd5e1;border-radius:5px;background:white;color:#1f2937;text-align:center}
+            QProgressBar::chunk {background:#93c5fd}
+            QToolTip {background:white;color:#1f2937;border:1px solid #cbd5e1}
+        ''')
         for widget, signal in [(self.logo_on,self.logo_on.toggled),(self.phone_on,self.phone_on.toggled),(self.bold,self.bold.toggled),(self.shadow,self.shadow.toggled),
                                (self.phone,self.phone.textChanged),(self.font_combo,self.font_combo.currentTextChanged),
                                (self.output_format,self.output_format.currentTextChanged),(self.quality,self.quality.currentTextChanged),
