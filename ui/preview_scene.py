@@ -71,9 +71,9 @@ class PreviewWidget(QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor('#e8ecf1'))
+        p.fillRect(self.rect(), QColor('#ffffff'))
         if not self.current:
-            p.setPen(QColor('#6b7280'))
+            p.setPen(QColor('#000000'))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, 'Thêm ảnh để xem trước')
             return
         rect = self.photo_rect()

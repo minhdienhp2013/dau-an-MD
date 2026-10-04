@@ -44,8 +44,14 @@ def run(app):
             # A dark system theme must not produce white text on our light controls.
             for widget in (window.phone, window.custom_text, window.font_combo):
                 palette = widget.palette()
-                assert palette.color(QPalette.ColorRole.Text).lightness() < 100
-                assert palette.color(QPalette.ColorRole.Base).lightness() > 200
+                assert palette.color(QPalette.ColorRole.Text).name() == '#000000'
+                assert palette.color(QPalette.ColorRole.Base).name() == '#ffffff'
+            for group in (QPalette.ColorGroup.Active, QPalette.ColorGroup.Inactive,
+                          QPalette.ColorGroup.Disabled):
+                for role in (QPalette.ColorRole.Text, QPalette.ColorRole.WindowText,
+                             QPalette.ColorRole.ButtonText, QPalette.ColorRole.HighlightedText,
+                             QPalette.ColorRole.PlaceholderText):
+                    assert app.palette().color(group, role).name() == '#000000'
             assert window.list.count() == 2
             assert 'phone' in window.preview.boxes
             assert 'logo' in window.preview.boxes
